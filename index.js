@@ -49,33 +49,31 @@ app.get("/redis/cache", async (req, res) => {
     });
   }
 
-  console.log(`🔍 Checking Redis cache for key: ${cacheKey}...`);
-
-  const cachedData = await redis.get(cacheKey);
-
-  if (cachedData) {
-    console.log("✅ Cache HIT! Sending cached data...");
-    return res.json({ source: "cache", data: cachedData });
+  const ttlSeconds = parseInt(TTL);
+  if (isNaN(ttlSeconds) || ttlSeconds <= 0) {
+    return res.status(400).json({ error: "'TTL' must be a positive number." });
   }
 
-  console.log("❌ Cache MISS! Fetching fresh data from external API...");
+  console.log(`🔍 Checking Redis cache for key: ${cacheKey}...`);
 
   try {
-    const response = await fetch(
-      "https://var-penalty.vercel.app/data/teams.json"
-    );
-    const data = await response.json();
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      console.log("✅ Cache HIT! Sending cached data...");
+      return res.json({ source: "cache", data: cachedData });
+    }
 
-    const ttlSeconds = parseInt(TTL);
+    console.log("❌ Cache MISS! Fetching fresh data...");
+    const response = await fetch("https://jsonplaceholder.typicode.com/posts");
+    const data = await response.json();
 
     await redis.set(cacheKey, JSON.stringify(data), { ex: ttlSeconds });
 
-    console.log(`💾 Fetched data cached to Redis for ${ttlSeconds}s.`);
-
+    console.log(`💾 Cached data for ${ttlSeconds}s.`);
     res.json({ source: "fresh", data });
   } catch (error) {
-    console.error("❌ Error fetching external data:", error.message);
-    res.status(500).json({ error: "Failed to fetch external data." });
+    console.error("❌ Error:", error.message);
+    res.status(500).json({ error: "Failed to fetch and cache data." });
   }
 });
 
