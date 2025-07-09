@@ -2,6 +2,7 @@ import chalk from "chalk";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import { redis } from "./lib/redis.js";
 
 dotenv.config();
 const app = express();
@@ -36,6 +37,46 @@ app.use(logger);
 // Mount Router
 app.get("/", (req, res) => {
   res.send("Exploring Redis server is running...");
+});
+
+app.get("/redis/cache", async (req, res) => {
+  const { key: cacheKey, TTL } = req.query;
+
+  if (!cacheKey || !TTL) {
+    console.log("⛔ Missing query parameters (key, TTL)");
+    return res.status(400).json({
+      error: "Please provide 'key' and 'TTL' as query parameters.",
+    });
+  }
+
+  console.log(`🔍 Checking Redis cache for key: ${cacheKey}...`);
+
+  const cachedData = await redis.get(cacheKey);
+
+  if (cachedData) {
+    console.log("✅ Cache HIT! Sending cached data...");
+    return res.json({ source: "cache", data: cachedData });
+  }
+
+  console.log("❌ Cache MISS! Fetching fresh data from external API...");
+
+  try {
+    const response = await fetch(
+      "https://var-penalty.vercel.app/data/teams.json"
+    );
+    const data = await response.json();
+
+    const ttlSeconds = parseInt(TTL);
+
+    await redis.set(cacheKey, JSON.stringify(data), { ex: ttlSeconds });
+
+    console.log(`💾 Fetched data cached to Redis for ${ttlSeconds}s.`);
+
+    res.json({ source: "fresh", data });
+  } catch (error) {
+    console.error("❌ Error fetching external data:", error.message);
+    res.status(500).json({ error: "Failed to fetch external data." });
+  }
 });
 
 // Start the server
