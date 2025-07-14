@@ -39,6 +39,7 @@ app.get("/", (req, res) => {
   res.send("Exploring Redis server is running...");
 });
 
+// Normal Cache
 app.get("/redis/cache", async (req, res) => {
   const { key: cacheKey, TTL } = req.query;
 
@@ -77,32 +78,7 @@ app.get("/redis/cache", async (req, res) => {
   }
 });
 
-app.get("/products/cache", async (req, res) => {
-  const cachedData = await redis.get("products");
-  if (cachedData) {
-    res.send({ source: "cache", data: cachedData });
-  }
-
-  const products = () => {
-    return new Promise((resolve) =>
-      setTimeout(() => {
-        resolve({
-          id: 1,
-          name: "Iphone 16",
-          price: 1000,
-          isNew: true,
-        });
-      }, 2000)
-    );
-  };
-
-  const result = await products();
-
-  await redis.set("products", JSON.stringify(result), { ex: 3600 });
-
-  res.send({ source: "fresh", data: result });
-});
-
+// Dynamic Cache
 app.get("/dynamic/cache", async (req, res) => {
   const bodyData = req.body;
   const { key, TTL } = req.query;
