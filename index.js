@@ -87,6 +87,7 @@ app.get("/products/cache", async (req, res) => {
     return new Promise((resolve) =>
       setTimeout(() => {
         resolve({
+          id: 1,
           name: "Iphone 16",
           price: 1000,
           isNew: true,
@@ -100,6 +101,31 @@ app.get("/products/cache", async (req, res) => {
   await redis.set("products", JSON.stringify(result), { ex: 3600 });
 
   res.send({ source: "fresh", data: result });
+});
+
+app.get("/dynamic/cache", async (req, res) => {
+  const bodyData = req.body;
+  const { key, TTL } = req.query;
+
+  // TTL validation
+  const ttlSeconds = parseInt(TTL);
+  if (isNaN(ttlSeconds) || ttlSeconds <= 0) {
+    return res.status(400).json({ error: "'TTL' must be a positive number." });
+  }
+
+  try {
+    const cachedData = await redis.get(key);
+    if (cachedData) {
+      return res.json({ source: "cache", data: cachedData });
+    }
+
+    await redis.set(key, JSON.stringify(bodyData), { ex: ttlSeconds });
+
+    return res.json({ source: "fresh", data: bodyData });
+  } catch (error) {
+    console.error("❌ Error:", error.message);
+    res.status(500).json({ error: "Failed to get and cache data!" });
+  }
 });
 
 // Start the server
