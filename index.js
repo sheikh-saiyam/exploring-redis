@@ -77,6 +77,31 @@ app.get("/redis/cache", async (req, res) => {
   }
 });
 
+app.get("/products/cache", async (req, res) => {
+  const cachedData = await redis.get("products");
+  if (cachedData) {
+    res.send({ source: "cache", data: cachedData });
+  }
+
+  const products = () => {
+    return new Promise((resolve) =>
+      setTimeout(() => {
+        resolve({
+          name: "Iphone 16",
+          price: 1000,
+          isNew: true,
+        });
+      }, 2000)
+    );
+  };
+
+  const result = await products();
+
+  await redis.set("products", JSON.stringify(result), { ex: 3600 });
+
+  res.send({ source: "fresh", data: result });
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`Exploring Redis Server is running at port: ${port}`);
