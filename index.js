@@ -39,7 +39,7 @@ app.get("/", (req, res) => {
   res.send("Exploring Redis server is running...");
 });
 
-// Normal Cache
+// Normal Cache to get data
 app.get("/redis/cache", async (req, res) => {
   const { key: cacheKey, TTL } = req.query;
 
@@ -78,7 +78,7 @@ app.get("/redis/cache", async (req, res) => {
   }
 });
 
-// Dynamic Cache
+// Dynamic Cache for post data
 app.get("/dynamic/cache", async (req, res) => {
   const bodyData = req.body;
   const { key, TTL } = req.query;
@@ -121,7 +121,7 @@ app.post("/invalidate/cache", async (req, res) => {
       return res.json({
         success: true,
         message: `Cache invalidated for key: ${key}`,
-        data: deletedCache
+        data: deletedCache,
       });
     } else {
       return res
