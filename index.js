@@ -104,6 +104,11 @@ app.get("/dynamic/cache", async (req, res) => {
   }
 });
 
+// Invalidate cache
+app.post("/invalidate/cache", async (req, res) => {
+  return res.send("Invalidate cache POST API route")
+})
+
 // Start the server
 app.listen(port, () => {
   console.log(`Exploring Redis Server is running at port: ${port}`);
