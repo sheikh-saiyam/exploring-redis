@@ -106,8 +106,32 @@ app.get("/dynamic/cache", async (req, res) => {
 
 // Invalidate cache
 app.post("/invalidate/cache", async (req, res) => {
-  return res.send("Invalidate cache POST API route")
-})
+  const { key } = req.query;
+
+  if (!key) {
+    return res
+      .status(400)
+      .json({ error: "Key is required to invalidate cache!" });
+  }
+
+  try {
+    const deletedCache = await redis.del(key);
+
+    if (deletedCache) {
+      return res.json({
+        success: true,
+        message: `Cache invalidated for key: ${key}`,
+        data: deletedCache
+      });
+    } else {
+      return res
+        .status(404)
+        .json({ success: false, message: "No such key in cache!" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: "Failed to invalidate cache!" });
+  }
+});
 
 // Start the server
 app.listen(port, () => {
